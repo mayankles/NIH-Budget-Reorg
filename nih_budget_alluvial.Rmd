@@ -1,5 +1,7 @@
 ---
 title: "NIH Budget Alluvial"
+author: Mayank Tandon
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
   html_document:
     toc: true
@@ -22,17 +24,21 @@ library(ggalluvial)
 library(DT)
 ```
 
-# Introduction
+# Background
 
 [View Github Repo](https://github.com/mayankles/NIH-Budget-Reorg)
 
-This analysis shows how the proposed NIH restructuring in FY 2026 fits into historical budget trends back to FY 2000.  
+This analysis explores how the recently proposed restructuring of the National Institutes of Health (NIH) fits into decades of historical funding patterns. In March 2025, HHS unveiled the “Make America Healthy Again” reorganization, which collapses the 27 existing NIH institutes and centers into eight new institutes and realigns several functions.
+
+Details of the budget numbers were released on May 30, 2025, as part of the [HHS FY 2026 Budget in Brief](https://www.hhs.gov/sites/default/files/fy-2026-budget-in-brief.pdf).
+
+We asked: **How do those new groupings compare to NIH’s budget trajectory back to FY 2000?**
 
 - **Data sources:**  
-  - [HHS FY 2026 Budget in Brief (NIH section)](https://www.hhs.gov/sites/default/files/fy-2026-budget-in-brief.pdf)  
+  - [HHS FY 2026 Budget in Brief (NIH section starts on Page 21)](https://www.hhs.gov/sites/default/files/fy-2026-budget-in-brief.pdf)  
   - [NIH historical appropriations (FY 2000–2024)](https://www.nih.gov/about-nih/nih-almanac/appropriations-section-1)
 
-- **Goal:** Visualize funding flows from the 27 “old” ICs (2000, 2010, 2020, 2024) into the 8 new institutes proposed for 2026.
+- **Goal:** Visualize funding flows from the 27 “old” ICs (Insitute Centers) across FYs 2000, 2010, 2020, and 2024 into the 8 new institutes proposed for 2026.
 
 ---
 
@@ -71,6 +77,16 @@ if (!"Eliminated" %in% new_totals$new_ic) {
 }
 ```
 
+Data was collected from the NIH Almanac and the HHS FY 2026 Budget in Brief **by ChaptGPT** in a CSV file.  I have manually spot-check about a dozen or so of the ~300 data points, and they seem to be correct.  
+
+
+I also asked it to create a mapping table for old-to-new IC designations.  **ChatGPT was surprisingly bad at this, though understandably so**.  For example, it had assigned NIDCR (National Institute for Dental and Craniofacial Research) to the new "Body Systems" institute, which is not what is outlined in the budget document.  I had to manually correct this and a few other misassignments.  The mapping table is included in the repo as `mapping.csv`.
+
+
+The historical budgets from 2000 to 2024 were joined with a mapping of old ICs to new institutes proposed for 2026. The 2024 budget was sliced to compute group sums for each new institute.
+
+# Apportionment for FY 2026 Totals
+
 ```{r apportioned-2026, echo=FALSE}
 # Apportion FY 2026 totals into old-IC "lodes" format
 lodes_2026 <- slice_2024 %>%
@@ -84,6 +100,10 @@ lodes_2026 <- slice_2024 %>%
     group    = new_ic                        
   )
 ```
+
+Since the 2026 budget numbers are only reported for the new IC designations, we need to estimate how much each old IC would contribute to the new institute's budget.  The simplest assumption is that the 2026 budget for each new institute is proportionally allocated based on the 2024 budget of its old IC members. That is, **the old ICs get the same relative share of the new institute's budget in 2026 as they did in 2024.**
+
+Practically, we do this by taking the 2024 budget for each old IC, dividing it by the total budget for that new institute in 2024, and multiplying it by the total budget for that new institute in 2026.
 
 ```{r lodes-hist, echo=FALSE}
 # Historical lodes for years 2000–2024
@@ -143,15 +163,25 @@ palette <- c(
   "Moved out of NIH"       = "#666666"
 )
 
+plot_data_readable <- plot_data %>%
+    rename(
+    IC               = alluvium,
+    Year             = x,
+    Budget           = weight,
+    IC_Year          = stratum,
+    New_Institute = group
+  )
 
-ggplot(plot_data,
-       aes(x = x, stratum = stratum, alluvium = alluvium, y = weight,
-           fill = group)) +
-  geom_flow(alpha = 0.7) +
-  geom_stratum(width = 0.5, color = "grey30") +
+
+
+myplot <- ggplot(plot_data_readable,
+       aes(x = Year, stratum = IC_Year, alluvium = IC, y = Budget,
+           fill = New_Institute, label=IC_Year)) +
+  geom_flow(alpha = 0.5) +
+  geom_stratum(width = 0.5, color = "grey30", alpha=0.8) +
   geom_text(
-    data = plot_data %>% filter(x == "2026"),
-    aes(label = stratum),
+    data = plot_data_readable %>% filter(Year == "2026"),
+    # aes(label = IC),
     stat = "stratum",
     size = 4,
     vjust = 0.5
@@ -166,61 +196,93 @@ ggplot(plot_data,
   ) +
   theme_minimal() +
   theme(legend.position = "none")
+
+myplot
+
 ```
 
 ---
 
 # Data Table
 
-```{r data-table}
+This table shows the values in the plot above.  You can scroll, sort, and search using the table controls.  The `$ Change` column shows the percentage change in budget from FY 2024 to FY 2026 for each institute.
+
+```{r wide-table-alpha, message=FALSE}
 library(tidyr)
 library(DT)
 library(RColorBrewer)
 
-# 1) Pivot to wide and round
+# 1) Pivot to wide, round, and compute pct_change
 wide_data <- plot_data %>%
   select(alluvium, group, x, weight) %>%
-  pivot_wider(
-    names_from  = x,
-    values_from = weight
-  ) %>%
+  pivot_wider(names_from = x, values_from = weight) %>%
   arrange(group, alluvium) %>%
   mutate(across(where(is.numeric), ~ round(.))) %>%
-  # 2) Rename columns
   rename(
-    `Current IC`                = alluvium,
-    `2026 Institute`  = group,
-    FY2000            = `2000`,
-    FY2010            = `2010`,
-    FY2020            = `2020`,
-    FY2024            = `2024`,
-    FY2026            = `2026`
+    IC                  = alluvium,
+    `2026 Institute`    = group,
+    FY2000              = `2000`,
+    FY2010              = `2010`,
+    FY2020              = `2020`,
+    FY2024              = `2024`,
+    FY2026              = `2026`
+  ) %>%
+  mutate(
+    `% Change` = round((FY2026 - FY2024) / FY2024 * 100, 1)
   )
 
-# 3) Build a Set3 palette in the same order ggplot would have used (alphabetical)
-inst_levels <- sort(unique(wide_data$`2026 Institute`))
-# colors     <- brewer.pal(length(inst_levels), "Set3")
-colors     <- palette[inst_levels]
+# 2) Prepare palettes with alpha = 0.6
+inst_levels      <- sort(unique(wide_data$`2026 Institute`))
+row_colors_alpha <- sapply(palette[inst_levels], function(hex) {
+  rgb <- grDevices::col2rgb(hex)
+  sprintf("rgba(%d,%d,%d,0.6)", rgb[1], rgb[2], rgb[3])
+})
+div_hex          <- brewer.pal(5, "RdYlGn")[c(1,5)]
+div_colors_alpha <- sapply(div_hex, function(hex) {
+  rgb <- grDevices::col2rgb(hex)
+  sprintf("rgba(%d,%d,%d,0.6)", rgb[1], rgb[2], rgb[3])
+})
 
-# 4) Render DT with full‐row background coloring by institute
+# 3) Columns to shade by institute (everything except pct_change)
+cols_institute <- setdiff(names(wide_data), "`% Change`")
+
+# 4) Render the table
 datatable(
   wide_data,
   rownames = FALSE,
   options = list(
-    paging          = FALSE,
-    scrollX         = TRUE,
-    scrollY         = "400px",
-    scrollCollapse  = TRUE
+    paging         = FALSE,
+    scrollX        = TRUE,
+    scrollY        = "400px",
+    scrollCollapse = TRUE
   )
 ) %>%
+  # A) Use the 2026 Institute *column* to color all the non–pct_change columns
   formatStyle(
-    '2026 Institute',
-    target           = 'row',
-    backgroundColor  = styleEqual(inst_levels, colors)
+    columns      = cols_institute,
+    valueColumns = "2026 Institute",              # <-- lookups come from here
+    backgroundColor = styleEqual(inst_levels, row_colors_alpha)
+  ) %>%
+  # B) Then style pct_change with diverging palette
+  formatStyle(
+    "% Change",
+    backgroundColor = styleInterval(0, div_colors_alpha),
+    color           = styleInterval(0, c("black","black"))
   )
 
 ```
 
+# Interactive Plot
+
+This is an attempt to make the plot interactive. Meh, it's kinda crappy, but you can use the hover text to get identities and budgets for the smaller slices.  Click and drag to zoom, triple click to zoom back out, and/or use the buttons on the top right corner.
+
+
+```{r plotly-plot, message=FALSE}
+library(plotly)
+# Convert ggplot to plotly
+ggplotly(myplot, tooltip=c("x","y","fill","stratum"))
+
+```
 ---
 
 # R Session Info
