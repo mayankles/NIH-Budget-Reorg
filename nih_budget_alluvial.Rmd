@@ -24,6 +24,8 @@ library(DT)
 
 # Introduction
 
+[View Github Repo](https://github.com/mayankles/NIH-Budget-Reorg)
+
 This analysis shows how the proposed NIH restructuring in FY 2026 fits into historical budget trends back to FY 2000.  
 
 - **Data sources:**  
