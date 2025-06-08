@@ -2,6 +2,8 @@
 
 This repository explores how the recently proposed restructuring of the National Institutes of Health (NIH) fits into decades of historical funding patterns.  In March 2025, HHS unveiled the “Make America Healthy Again” reorganization, which collapses the 27 existing NIH institutes and centers into eight new institutes and realigns several functions.  We asked: **How do those new groupings compare to NIH’s budget trajectory back to FY 2000?**
 
+[View Results Here](https://mayankles.github.io/NIH-Budget-Reorg/nih_budget_alluvial.html)
+
 ## How the Analysis Works
 
 1. **Data Ingestion**  
