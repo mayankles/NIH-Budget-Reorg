@@ -10,10 +10,10 @@ This repository explores how the recently proposed restructuring of the National
 
 2. **Proportional Allocation of FY 2026**  
    - We sum each new institute’s total FY 2026 request.  
-   - For each *old* IC in a group, we calculate  
-     \[
-       \text{IC}_{2026} = \frac{\text{IC}_{2024}}{\sum_{\text{group}} \text{IC}_{2024}} \;\times\; \text{NewInstitute}_{2026}.
-     \]
+   - For each *old* IC in a group, we calculate
+     ```math
+     \text{IC}_{2026} = \frac{\text{IC}_{2024}}{\sum_{\text{group}} \text{IC}_{2024}} \;\times\; \text{NewInstitute}_{2026}.
+     ```
    - This gives every old IC a “destination” value in 2026, so ribbons can flow into the correct new‐institute node.
 
 3. **Building the Alluvial (“Lodes”) Data**  
