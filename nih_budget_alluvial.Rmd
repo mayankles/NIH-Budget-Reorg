@@ -186,7 +186,7 @@ wide_data <- plot_data %>%
   mutate(across(where(is.numeric), ~ round(.))) %>%
   # 2) Rename columns
   rename(
-    IC                = alluvium,
+    `Current IC`                = alluvium,
     `2026 Institute`  = group,
     FY2000            = `2000`,
     FY2010            = `2010`,
@@ -198,7 +198,7 @@ wide_data <- plot_data %>%
 # 3) Build a Set3 palette in the same order ggplot would have used (alphabetical)
 inst_levels <- sort(unique(wide_data$`2026 Institute`))
 # colors     <- brewer.pal(length(inst_levels), "Set3")
-colors     <- palette
+colors     <- palette[inst_levels]
 
 # 4) Render DT with full‐row background coloring by institute
 datatable(
