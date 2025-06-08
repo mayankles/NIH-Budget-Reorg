@@ -190,7 +190,68 @@ plot_data_real <- plot_data %>%
 
 # Alluvial Plot
 
-```{r plot-alluvial}
+## Raw Budget Numbers
+
+This plot shows the nominal dollar amounts allocated to each institute in each year, without adjusting for inflation.
+
+```{r plot-alluvial-raw}
+palette <- c(
+  "NCI"                    = "#377EB8",
+  "Body Systems"           = "#E41A1C",
+  "Neuroscience & Brain"   = "#4DAF4A",
+  "NIAID"                  = "#984EA3",
+  "GMS"                    = "#FF7F00",
+  "Child & Women’s Health" = "#A65628",
+  "NIA"                    = "#F781BF",
+  "Behavioral Health"      = "#999999",
+  "Office of the Director" = "#8DD3C7",
+  "Eliminated"             = "grey90",
+  "Moved out of NIH"       = "#666666"
+)
+
+plot_data_readable <- plot_data_real %>%
+    rename(
+    IC               = alluvium,
+    Year             = x,
+    Budget           = weight,
+    IC_Year          = stratum,
+    New_Institute = group
+  )
+
+
+
+myplot <- ggplot(plot_data_readable,
+       aes(x = Year, stratum = IC_Year, alluvium = IC, y = Budget,
+           fill = New_Institute, label=IC_Year)) +
+  geom_flow(alpha = 0.5) +
+  geom_stratum(width = 0.5, color = "grey30", alpha=0.8) +
+  geom_text(
+    data = plot_data_readable %>% filter(Year == "2026"),
+    # aes(label = IC),
+    stat = "stratum",
+    size = 4,
+    vjust = 0.5
+  ) +
+  scale_fill_manual(values = palette, na.value = "white") +
+  labs(
+    title    = "NIH Budget Alluvial: 2000→2010→2020→2024→2026",
+    subtitle = "Flows from 27 old ICs into 8 new institutes (FY 2026 proposed)",
+    x        = "Fiscal Year",
+    y        = "Budget (Millions USD, nominal)",
+    fill     = "2026 Institute"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+myplot
+
+```
+
+## Inflation-adjusted Budget Numbers
+
+This plot shows the budget amounts adjusted for inflation to 2024 dollars, allowing for a more accurate comparison of funding levels over time.
+
+```{r plot-alluvial-adj}
 palette <- c(
   "NCI"                    = "#377EB8",
   "Body Systems"           = "#E41A1C",
