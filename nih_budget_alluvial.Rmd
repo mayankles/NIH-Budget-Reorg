@@ -157,6 +157,35 @@ plot_data$stratum <- factor(plot_data$stratum, levels = unique(grouped_levels))
 
 ```
 
+# Adjusting for inflation
+To adjust historical budgets for inflation, we will use the BRDPI (Biomedical Research and Development Price Index) provided by the NIH Office of Budget. This index allows us to convert historical budget numbers into real terms relative to a base year (2024 in this case). Indices were extracted from [this PDF](https://officeofbudget.od.nih.gov/pdfs/FY24/GDP/BRDPI%20Price%20Index%20Annual%20and%20Cumulative%20Values_For_1950_Through_2029.pdf).
+
+```{r inflation-adjust}
+# 1) BRDPI lookup table
+## Using numbers from the first column of the BRDPI table provided by NIH Office of Budget:
+## https://officeofbudget.od.nih.gov/pdfs/FY24/GDP/BRDPI%20Price%20Index%20Annual%20and%20Cumulative%20Values_For_1950_Through_2029.pdf
+brdpi <- tibble::tribble(
+  ~year,   ~brdpi,
+   2000L,   977.7,
+   2010L,  1403.7,
+   2020L,  1733.4,
+   2024L,  1994.1,
+   2026L,  2101.5
+)
+
+# 2) Base index (2024)
+base_idx <- brdpi %>% filter(year==2026) %>% pull(brdpi)
+
+# 3) Merge & compute real budgets
+plot_data_real <- plot_data %>%
+  # turn the factor‐year ("x") into an integer so we can join
+  mutate(year = as.integer(as.character(x))) %>%
+  left_join(brdpi, by="year") %>%
+  mutate(
+    weight_real = weight * (base_idx / brdpi)
+  )
+```
+
 ---
 
 # Alluvial Plot
@@ -176,11 +205,11 @@ palette <- c(
   "Moved out of NIH"       = "#666666"
 )
 
-plot_data_readable <- plot_data %>%
+plot_data_readable <- plot_data_real %>%
     rename(
     IC               = alluvium,
     Year             = x,
-    Budget           = weight,
+    Budget           = weight_real,
     IC_Year          = stratum,
     New_Institute = group
   )
@@ -204,7 +233,7 @@ myplot <- ggplot(plot_data_readable,
     title    = "NIH Budget Alluvial: 2000→2010→2020→2024→2026",
     subtitle = "Flows from 27 old ICs into 8 new institutes (FY 2026 proposed)",
     x        = "Fiscal Year",
-    y        = "Budget (Millions USD)",
+    y        = "Budget (Millions USD, inflation adjusted)",
     fill     = "2026 Institute"
   ) +
   theme_minimal() +
@@ -226,9 +255,9 @@ library(DT)
 library(RColorBrewer)
 
 # 1) Pivot to wide, round, and compute pct_change
-wide_data <- plot_data %>%
-  select(alluvium, group, x, weight) %>%
-  pivot_wider(names_from = x, values_from = weight) %>%
+wide_data <- plot_data_real %>%
+  select(alluvium, group, x, weight_real) %>%
+  pivot_wider(names_from = x, values_from = weight_real) %>%
   arrange(group, alluvium) %>%
   mutate(across(where(is.numeric), ~ round(.))) %>%
   rename(
