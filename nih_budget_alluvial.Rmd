@@ -192,7 +192,9 @@ plot_data_real <- plot_data %>%
 
 ## Raw Budget Numbers
 
-This plot shows the nominal dollar amounts allocated to each institute in each year, without adjusting for inflation.
+This plot shows the nominal dollar amounts allocated to each institute in each year, without adjusting for inflation. 
+
+**Note that the x-axis is not linear, as it represents discrete fiscal years.**
 
 ```{r plot-alluvial-raw}
 palette <- c(
@@ -241,6 +243,10 @@ myplot <- ggplot(plot_data_readable,
     fill     = "2026 Institute"
   ) +
   theme_minimal() +
+  theme(axis.title.x = element_text(size = 18),
+        axis.title.y = element_text(size = 18),
+        axis.text.x  = element_text(size = 16),
+        axis.text.y  = element_text(size = 16)) +
   theme(legend.position = "none")
 
 myplot
@@ -250,6 +256,8 @@ myplot
 ## Inflation-adjusted Budget Numbers
 
 This plot shows the budget amounts adjusted for inflation to 2024 dollars, allowing for a more accurate comparison of funding levels over time.
+
+**Note that the x-axis is not linear, as it represents discrete fiscal years.**
 
 ```{r plot-alluvial-adj}
 palette <- c(
@@ -297,7 +305,12 @@ myplot <- ggplot(plot_data_readable,
     y        = "Budget (Millions USD, inflation adjusted)",
     fill     = "2026 Institute"
   ) +
+  # increase x- and y-axis label font sizes
   theme_minimal() +
+  theme(axis.title.x = element_text(size = 18),
+        axis.title.y = element_text(size = 18),
+        axis.text.x  = element_text(size = 16),
+        axis.text.y  = element_text(size = 16)) +
   theme(legend.position = "none")
 
 myplot
