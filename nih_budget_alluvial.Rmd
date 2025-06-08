@@ -1,0 +1,228 @@
+---
+title: "NIH Budget Alluvial"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo       = TRUE,
+  message    = FALSE,
+  warning    = FALSE,
+  fig.width  = 10,
+  fig.height = 6
+)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(ggalluvial)
+library(DT)
+```
+
+# Introduction
+
+This analysis shows how the proposed NIH restructuring in FY 2026 fits into historical budget trends back to FY 2000.  
+
+- **Data sources:**  
+  - [HHS FY 2026 Budget in Brief (NIH section)](https://www.hhs.gov/sites/default/files/fy-2026-budget-in-brief.pdf)  
+  - [NIH historical appropriations (FY 2000–2024)](https://www.nih.gov/about-nih/nih-almanac/appropriations-section-1)
+
+- **Goal:** Visualize funding flows from the 27 “old” ICs (2000, 2010, 2020, 2024) into the 8 new institutes proposed for 2026.
+
+---
+
+# Data Preparation
+
+```{r load-data}
+# Read budgets and mapping
+budgets <- read.csv("budgets.csv", stringsAsFactors = FALSE)
+mapping <- read.csv("mapping.csv", stringsAsFactors = FALSE)
+
+# Separate historical vs. 2026 totals
+hist_budgets <- budgets %>% filter(year < 2026)
+new_totals   <- budgets %>% filter(year == 2026) %>%
+  rename(new_ic = ic, total_2026 = budget) %>%
+  select(new_ic, total_2026)
+
+# Tag each old IC with its new institute
+hist_joined <- hist_budgets %>%
+  left_join(mapping, by = c("ic" = "old_ic")) %>%
+  filter(!is.na(new_ic))
+
+# Slice 2024 to compute group sums
+slice_2024 <- hist_joined %>%
+  filter(year == 2024) %>%
+  select(ic, budget_2024 = budget, new_ic)
+
+group_sums_2024 <- slice_2024 %>%
+  group_by(new_ic) %>%
+  summarize(group_sum_2024 = sum(budget_2024), .groups = "drop")
+
+if (!"Eliminated" %in% new_totals$new_ic) {
+  new_totals <- bind_rows(
+    new_totals,
+    tibble(new_ic = "Eliminated", total_2026 = group_sums_2024$group_sum_2024[group_sums_2024$new_ic == "Eliminated"])
+  )
+}
+```
+
+```{r apportioned-2026, echo=FALSE}
+# Apportion FY 2026 totals into old-IC "lodes" format
+lodes_2026 <- slice_2024 %>%
+  left_join(group_sums_2024, by = "new_ic") %>%
+  left_join(new_totals,         by = "new_ic") %>%
+  transmute(
+    alluvium = ic,                           
+    x        = 2026L,                        
+    weight   = budget_2024 / group_sum_2024 * total_2026,
+    stratum  = new_ic,                       
+    group    = new_ic                        
+  )
+```
+
+```{r lodes-hist, echo=FALSE}
+# Historical lodes for years 2000–2024
+lodes_hist <- hist_joined %>%
+  select(
+    alluvium = ic,
+    x        = year,
+    weight   = budget,
+    stratum  = ic,
+    group    = new_ic
+  ) %>%
+  distinct()
+```
+
+```{r combine-lodes, echo=FALSE}
+# Combine and factor the year levels
+plot_data <- bind_rows(lodes_hist, lodes_2026) %>%
+  mutate(x = factor(x, levels = c("2000","2010","2020","2024","2026")))
+
+new_order <- new_totals %>%
+  arrange(total_2026) %>%      # smallest first → top of column
+  pull(new_ic)
+
+# 2. Rebuild grouped_levels, ordering old IC members by their 2024 budget
+grouped_levels <- unlist(lapply(new_order, function(g) {
+  members <- slice_2024 %>%
+    filter(new_ic == g) %>%
+    # ascending = smallest at top of group, largest just above the new‐institute block
+    arrange(budget_2024) %>%
+    pull(ic)
+  # put the new‐institute name first so its block appears before its ribbons
+  c(g, members)
+}), use.names = FALSE)
+
+# 3. Set the factor levels of stratum to that combined vector
+plot_data$stratum <- factor(plot_data$stratum, levels = unique(grouped_levels))
+
+
+```
+
+---
+
+# Alluvial Plot
+
+```{r plot-alluvial}
+palette <- c(
+  "NCI"                    = "#377EB8",
+  "Body Systems"           = "#E41A1C",
+  "Neuroscience & Brain"   = "#4DAF4A",
+  "NIAID"                  = "#984EA3",
+  "GMS"                    = "#FF7F00",
+  "Child & Women’s Health" = "#A65628",
+  "NIA"                    = "#F781BF",
+  "Behavioral Health"      = "#999999",
+  "Office of the Director" = "#8DD3C7",
+  "Eliminated"             = "grey90",
+  "Moved out of NIH"       = "#666666"
+)
+
+
+ggplot(plot_data,
+       aes(x = x, stratum = stratum, alluvium = alluvium, y = weight,
+           fill = group)) +
+  geom_flow(alpha = 0.7) +
+  geom_stratum(width = 0.5, color = "grey30") +
+  geom_text(
+    data = plot_data %>% filter(x == "2026"),
+    aes(label = stratum),
+    stat = "stratum",
+    size = 4,
+    vjust = 0.5
+  ) +
+  scale_fill_manual(values = palette, na.value = "white") +
+  labs(
+    title    = "NIH Budget Alluvial: 2000→2010→2020→2024→2026",
+    subtitle = "Flows from 27 old ICs into 8 new institutes (FY 2026 proposed)",
+    x        = "Fiscal Year",
+    y        = "Budget (Millions USD)",
+    fill     = "2026 Institute"
+  ) +
+  theme_minimal() +
+  theme(legend.position = "none")
+```
+
+---
+
+# Data Table
+
+```{r data-table}
+library(tidyr)
+library(DT)
+library(RColorBrewer)
+
+# 1) Pivot to wide and round
+wide_data <- plot_data %>%
+  select(alluvium, group, x, weight) %>%
+  pivot_wider(
+    names_from  = x,
+    values_from = weight
+  ) %>%
+  arrange(group, alluvium) %>%
+  mutate(across(where(is.numeric), ~ round(.))) %>%
+  # 2) Rename columns
+  rename(
+    IC                = alluvium,
+    `2026 Institute`  = group,
+    FY2000            = `2000`,
+    FY2010            = `2010`,
+    FY2020            = `2020`,
+    FY2024            = `2024`,
+    FY2026            = `2026`
+  )
+
+# 3) Build a Set3 palette in the same order ggplot would have used (alphabetical)
+inst_levels <- sort(unique(wide_data$`2026 Institute`))
+# colors     <- brewer.pal(length(inst_levels), "Set3")
+colors     <- palette
+
+# 4) Render DT with full‐row background coloring by institute
+datatable(
+  wide_data,
+  rownames = FALSE,
+  options = list(
+    paging          = FALSE,
+    scrollX         = TRUE,
+    scrollY         = "400px",
+    scrollCollapse  = TRUE
+  )
+) %>%
+  formatStyle(
+    '2026 Institute',
+    target           = 'row',
+    backgroundColor  = styleEqual(inst_levels, colors)
+  )
+
+```
+
+---
+
+# R Session Info
+
+``` {r print-session-info, attr.output='style="max-height: 150px;"'}
+sessionInfo()
+```
