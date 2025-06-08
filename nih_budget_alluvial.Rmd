@@ -160,6 +160,9 @@ plot_data$stratum <- factor(plot_data$stratum, levels = unique(grouped_levels))
 # Adjusting for inflation
 To adjust historical budgets for inflation, we will use the BRDPI (Biomedical Research and Development Price Index) provided by the NIH Office of Budget. This index allows us to convert historical budget numbers into real terms relative to a base year (2024 in this case). Indices were extracted from [this PDF](https://officeofbudget.od.nih.gov/pdfs/FY24/GDP/BRDPI%20Price%20Index%20Annual%20and%20Cumulative%20Values_For_1950_Through_2029.pdf).
 
+BRDPI adjusts not only for overall inflation, but specifically for things relevant to the NIH budget. It tracks "prices paid for the labor, supplies, equipment, and other inputs required to perform the biomedical research the NIH supports in its intramural laboratories and through its awards to extramural organizations." [Source: Bureau of Economic Analysis (BEA)](https://www.aeaweb.org/forum/3794/biomedical-price-index-brdpi-invites-comments-collection)
+
+
 ```{r inflation-adjust}
 # 1) BRDPI lookup table
 ## Using numbers from the first column of the BRDPI table provided by NIH Office of Budget:
@@ -188,74 +191,13 @@ plot_data_real <- plot_data %>%
 
 ---
 
-# Alluvial Plot
+# Alluvial Plots
 
-## Raw Budget Numbers
+## Budget plots {.tabset}
 
-This plot shows the nominal dollar amounts allocated to each institute in each year, without adjusting for inflation. 
+These plot show the budget amounts in nominal or adjusted dollars in separate tabs. The x-axis represents fiscal years, while the y-axis shows the budget amounts in millions of USD. The colors represent the new institutes proposed for 2026, and the flows show how budgets from old ICs are redistributed into these new institutes.
 
-**Note that the x-axis is not linear, as it represents discrete fiscal years.**
-
-```{r plot-alluvial-raw}
-palette <- c(
-  "NCI"                    = "#377EB8",
-  "Body Systems"           = "#E41A1C",
-  "Neuroscience & Brain"   = "#4DAF4A",
-  "NIAID"                  = "#984EA3",
-  "GMS"                    = "#FF7F00",
-  "Child & Women’s Health" = "#A65628",
-  "NIA"                    = "#F781BF",
-  "Behavioral Health"      = "#999999",
-  "Office of the Director" = "#8DD3C7",
-  "Eliminated"             = "grey90",
-  "Moved out of NIH"       = "#666666"
-)
-
-plot_data_readable <- plot_data_real %>%
-    rename(
-    IC               = alluvium,
-    Year             = x,
-    Budget           = weight,
-    IC_Year          = stratum,
-    New_Institute = group
-  )
-
-
-
-myplot <- ggplot(plot_data_readable,
-       aes(x = Year, stratum = IC_Year, alluvium = IC, y = Budget,
-           fill = New_Institute, label=IC_Year)) +
-  geom_flow(alpha = 0.5) +
-  geom_stratum(width = 0.5, color = "grey30", alpha=0.8) +
-  geom_text(
-    data = plot_data_readable %>% filter(Year == "2026"),
-    # aes(label = IC),
-    stat = "stratum",
-    size = 4,
-    vjust = 0.5
-  ) +
-  scale_fill_manual(values = palette, na.value = "white") +
-  labs(
-    title    = "NIH Budget Alluvial: 2000→2010→2020→2024→2026",
-    subtitle = "Flows from 27 old ICs into 8 new institutes (FY 2026 proposed)",
-    x        = "Fiscal Year",
-    y        = "Budget (Millions USD, nominal)",
-    fill     = "2026 Institute"
-  ) +
-  theme_minimal() +
-  theme(axis.title.x = element_text(size = 18),
-        axis.title.y = element_text(size = 18),
-        axis.text.x  = element_text(size = 16),
-        axis.text.y  = element_text(size = 16)) +
-  theme(legend.position = "none")
-
-myplot
-
-```
-
-## Inflation-adjusted Budget Numbers
-
-This plot shows the budget amounts adjusted for inflation to 2024 dollars, allowing for a more accurate comparison of funding levels over time.
+### Inflation-adjusted Budget Numbers
 
 **Note that the x-axis is not linear, as it represents discrete fiscal years.**
 
@@ -317,13 +259,78 @@ myplot
 
 ```
 
+### Raw Budget Numbers
+
+**Note that the x-axis is not linear, as it represents discrete fiscal years.**
+
+```{r plot-alluvial-raw}
+palette <- c(
+  "NCI"                    = "#377EB8",
+  "Body Systems"           = "#E41A1C",
+  "Neuroscience & Brain"   = "#4DAF4A",
+  "NIAID"                  = "#984EA3",
+  "GMS"                    = "#FF7F00",
+  "Child & Women’s Health" = "#A65628",
+  "NIA"                    = "#F781BF",
+  "Behavioral Health"      = "#999999",
+  "Office of the Director" = "#8DD3C7",
+  "Eliminated"             = "grey90",
+  "Moved out of NIH"       = "#666666"
+)
+
+plot_data_readable <- plot_data_real %>%
+    rename(
+    IC               = alluvium,
+    Year             = x,
+    Budget           = weight,
+    IC_Year          = stratum,
+    New_Institute = group
+  )
+
+
+
+myplot <- ggplot(plot_data_readable,
+       aes(x = Year, stratum = IC_Year, alluvium = IC, y = Budget,
+           fill = New_Institute, label=IC_Year)) +
+  geom_flow(alpha = 0.5) +
+  geom_stratum(width = 0.5, color = "grey30", alpha=0.8) +
+  geom_text(
+    data = plot_data_readable %>% filter(Year == "2026"),
+    # aes(label = IC),
+    stat = "stratum",
+    size = 4,
+    vjust = 0.5
+  ) +
+  scale_fill_manual(values = palette, na.value = "white") +
+  labs(
+    title    = "NIH Budget Alluvial: 2000→2010→2020→2024→2026",
+    subtitle = "Flows from 27 old ICs into 8 new institutes (FY 2026 proposed)",
+    x        = "Fiscal Year",
+    y        = "Budget (Millions USD, nominal)",
+    fill     = "2026 Institute"
+  ) +
+  theme_minimal() +
+  theme(axis.title.x = element_text(size = 18),
+        axis.title.y = element_text(size = 18),
+        axis.text.x  = element_text(size = 16),
+        axis.text.y  = element_text(size = 16)) +
+  theme(legend.position = "none")
+
+myplot
+
+```
+
 ---
 
 # Data Table
 
-This table shows the values in the plot above.  You can scroll, sort, and search using the table controls.  The `% Change` column shows the percentage change in budget from FY 2024 to FY 2026 for each institute.
+## Interactive tables {.tabset}
 
-```{r wide-table-alpha, message=FALSE}
+These tables shows the values in the plot above, with nominal and adjusted values in separate tabs.  You can scroll, sort, and search using the table controls.  The `% Change` column shows the percentage change in budget from FY 2024 to FY 2026 for each institute.
+
+### Inflation-adjusted Budget Numbers
+
+```{r wide-table-alpha-adj, message=FALSE}
 library(tidyr)
 library(DT)
 library(RColorBrewer)
@@ -366,11 +373,84 @@ cols_institute <- setdiff(names(wide_data), "`% Change`")
 datatable(
   wide_data,
   rownames = FALSE,
+  extensions = "Buttons",
   options = list(
+    dom = 'Bfrtip',
     paging         = FALSE,
     scrollX        = TRUE,
     scrollY        = "400px",
-    scrollCollapse = TRUE
+    scrollCollapse = TRUE,
+    buttons = c('copy', 'csv', 'excel')
+  )
+) %>%
+  # A) Use the 2026 Institute *column* to color all the non–pct_change columns
+  formatStyle(
+    columns      = cols_institute,
+    valueColumns = "2026 Institute",              # <-- lookups come from here
+    backgroundColor = styleEqual(inst_levels, row_colors_alpha)
+  ) %>%
+  # B) Then style pct_change with diverging palette
+  formatStyle(
+    "% Change",
+    backgroundColor = styleInterval(0, div_colors_alpha),
+    color           = styleInterval(0, c("black","black"))
+  )
+
+```
+
+### Raw Budget Numbers
+
+```{r wide-table-alpha-raw, message=FALSE}
+library(tidyr)
+library(DT)
+library(RColorBrewer)
+
+# 1) Pivot to wide, round, and compute pct_change
+wide_data <- plot_data_real %>%
+  select(alluvium, group, x, weight) %>%
+  pivot_wider(names_from = x, values_from = weight) %>%
+  arrange(group, alluvium) %>%
+  mutate(across(where(is.numeric), ~ round(.))) %>%
+  rename(
+    IC                  = alluvium,
+    `2026 Institute`    = group,
+    FY2000              = `2000`,
+    FY2010              = `2010`,
+    FY2020              = `2020`,
+    FY2024              = `2024`,
+    FY2026              = `2026`
+  ) %>%
+  mutate(
+    `% Change` = round((FY2026 - FY2024) / FY2024 * 100, 1)
+  )
+
+# 2) Prepare palettes with alpha = 0.6
+inst_levels      <- sort(unique(wide_data$`2026 Institute`))
+row_colors_alpha <- sapply(palette[inst_levels], function(hex) {
+  rgb <- grDevices::col2rgb(hex)
+  sprintf("rgba(%d,%d,%d,0.6)", rgb[1], rgb[2], rgb[3])
+})
+div_hex          <- brewer.pal(5, "RdYlGn")[c(1,5)]
+div_colors_alpha <- sapply(div_hex, function(hex) {
+  rgb <- grDevices::col2rgb(hex)
+  sprintf("rgba(%d,%d,%d,0.6)", rgb[1], rgb[2], rgb[3])
+})
+
+# 3) Columns to shade by institute (everything except pct_change)
+cols_institute <- setdiff(names(wide_data), "`% Change`")
+
+# 4) Render the table
+datatable(
+  wide_data,
+  rownames = FALSE,
+  extensions = "Buttons",
+  options = list(
+    dom = 'Bfrtip',
+    paging         = FALSE,
+    scrollX        = TRUE,
+    scrollY        = "400px",
+    scrollCollapse = TRUE,
+    buttons = c('copy', 'csv', 'excel')
   )
 ) %>%
   # A) Use the 2026 Institute *column* to color all the non–pct_change columns
