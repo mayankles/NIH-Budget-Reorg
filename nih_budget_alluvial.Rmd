@@ -5,7 +5,6 @@ date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
   html_document:
     toc: true
-    toc_float: true
     toc_depth: 2
     code_folding: hide
 ---
@@ -219,7 +218,7 @@ myplot
 
 # Data Table
 
-This table shows the values in the plot above.  You can scroll, sort, and search using the table controls.  The `$ Change` column shows the percentage change in budget from FY 2024 to FY 2026 for each institute.
+This table shows the values in the plot above.  You can scroll, sort, and search using the table controls.  The `% Change` column shows the percentage change in budget from FY 2024 to FY 2026 for each institute.
 
 ```{r wide-table-alpha, message=FALSE}
 library(tidyr)
