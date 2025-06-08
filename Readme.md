@@ -55,3 +55,6 @@ This repository explores how the recently proposed restructuring of the National
 ---
 
 *This work lets you see not only how much each IC has grown or shrunk over the last 25 years, but also exactly how its funding “flows” into the new institute structure proposed for FY 2026.*  
+
+# Attribution
+This project was written and coded using ChatGPT o4-mini-high, and fixed by me to actually get it to work. You can read the entire chat [here](https://chatgpt.com/share/68459935-01b8-8012-bffc-9bf730d6f977).
