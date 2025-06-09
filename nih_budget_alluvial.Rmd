@@ -90,7 +90,7 @@ if (!"Eliminated" %in% new_totals$new_ic) {
 }
 ```
 
-Data was collected from the NIH Almanac and the HHS FY 2026 Budget in Brief **by ChaptGPT** in a CSV file.  I have manually spot-check about a dozen or so of the ~300 data points, and they seem to be correct.  
+Data was collected from the NIH Almanac and the HHS FY 2026 Budget in Brief **by ChatGPT** in a CSV file.  I have manually spot-checked about a dozen or so of the ~300 data points, and they seem to be correct.
 
 
 I also asked it to create a mapping table for old-to-new IC designations.  **ChatGPT was surprisingly bad at this, though understandably so**.  For example, it had assigned NIDCR (National Institute for Dental and Craniofacial Research) to the new "Body Systems" institute, which is not what is outlined in the budget document.  I had to manually correct this and a few other misassignments.  The mapping table is included in the repo as `mapping.csv`.
@@ -158,7 +158,7 @@ plot_data$stratum <- factor(plot_data$stratum, levels = unique(grouped_levels))
 ```
 
 # Adjusting for inflation
-To adjust historical budgets for inflation, we will use the BRDPI (Biomedical Research and Development Price Index) provided by the NIH Office of Budget. This index allows us to convert historical budget numbers into real terms relative to a base year (2024 in this case). Indices were extracted from [this PDF](https://officeofbudget.od.nih.gov/pdfs/FY24/GDP/BRDPI%20Price%20Index%20Annual%20and%20Cumulative%20Values_For_1950_Through_2029.pdf).
+To adjust historical budgets for inflation, we will use BRDPI (Biomedical Research and Development Price Index) provided by the NIH Office of Budget. This index allows us to convert historical budget numbers into real terms relative to a base year (2024 in this case). Indices were extracted from [this PDF](https://officeofbudget.od.nih.gov/pdfs/FY24/GDP/BRDPI%20Price%20Index%20Annual%20and%20Cumulative%20Values_For_1950_Through_2029.pdf).
 
 BRDPI adjusts not only for overall inflation, but specifically for things relevant to the NIH budget. It tracks "prices paid for the labor, supplies, equipment, and other inputs required to perform the biomedical research the NIH supports in its intramural laboratories and through its awards to extramural organizations." [Source: Bureau of Economic Analysis (BEA)](https://www.aeaweb.org/forum/3794/biomedical-price-index-brdpi-invites-comments-collection)
 
@@ -257,6 +257,8 @@ myplot <- ggplot(plot_data_readable,
 
 myplot
 
+ggsave("nih_budget_alluvial_adj.png", myplot, width = 10, height = 6, dpi = 300)
+
 ```
 
 ### Raw Budget Numbers
@@ -317,7 +319,7 @@ myplot <- ggplot(plot_data_readable,
   theme(legend.position = "none")
 
 myplot
-
+ggsave("nih_budget_alluvial_raw.png", myplot, width = 10, height = 6, dpi = 300)
 ```
 
 ---
@@ -465,6 +467,7 @@ datatable(
     backgroundColor = styleInterval(0, div_colors_alpha),
     color           = styleInterval(0, c("black","black"))
   )
+ggsave("nih_budget_alluvial.png", myplot, width = 10, height = 6, dpi = 300)
 
 ```
 
